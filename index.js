@@ -5,19 +5,21 @@ app.use(express.json());
 
 app.post("/", (req, res) => {
   try {
-    // si es health-check → acción "ping"
+    // -------- health-check ----------
     if (req.body?.action === "ping") {
       const clear = JSON.stringify({ data: { status: "active" } });
-      const b64   = Buffer.from(clear).toString("base64");
-      return res.type("text/plain").send(b64);   // <- cadena Base64
+      const b64   = Buffer.from(clear, "utf8").toString("base64");
+      return res.type("text/plain").send(b64);
     }
 
-    // -------- tu lógica normal --------
+    // -------- flujo normal ----------
     const d = req.body?.data || {};
-    return res.json({
+    const clear = JSON.stringify({
       screen: "CONFIRMACION",
-      data:  d
+      data:   d
     });
+    const b64 = Buffer.from(clear, "utf8").toString("base64");
+    return res.type("text/plain").send(b64);   // <- SIEMPRE Base64
   } catch (e) {
     console.error(e);
     return res.status(500).end();
