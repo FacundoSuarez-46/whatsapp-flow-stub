@@ -2,7 +2,7 @@ import "dotenv/config";
 import crypto from "crypto";
 import express from "express";
 
-const { PRIVATE_KEY, PASSPHRASE = "" } = process.env;
+const { PRIVATE_KEY } = process.env;
 if (!PRIVATE_KEY) throw new Error("Env PRIVATE_KEY vacío");
 
 const TAG = 16;
@@ -17,7 +17,7 @@ const flipIV = iv => {
 };
 
 function decrypt(body) {
-  const priv = crypto.createPrivateKey({ key: PRIVATE_KEY, passphrase: PASSPHRASE });
+  const priv = crypto.createPrivateKey({ key: PRIVATE_KEY });
   const aes  = crypto.privateDecrypt(
     { key: priv, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
     Buffer.from(body.encrypted_aes_key, "base64"),
