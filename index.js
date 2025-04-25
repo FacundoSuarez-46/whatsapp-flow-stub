@@ -16,7 +16,6 @@ function decrypt(body) {
   const priv = crypto.createPrivateKey({
     key: PRIVATE_KEY,
     format: "pem",
-    type:   "pkcs1"
   });
 
   const aes = crypto.privateDecrypt(
