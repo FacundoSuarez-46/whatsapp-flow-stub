@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json());
 
 // ---------- helpers -------------------------------
-const flipIV = iv => {
+const flipIV = (iv) => {
   const out = Buffer.allocUnsafe(iv.length);
   for (let i = 0; i < iv.length; i++) out[i] = iv[i] ^ 0xff;
   return out;
@@ -18,15 +18,19 @@ const flipIV = iv => {
 
 function decrypt(body) {
   const priv = crypto.createPrivateKey({ key: PRIVATE_KEY });
-  const aes  = crypto.privateDecrypt(
-    { key: priv, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
+  const aes = crypto.privateDecrypt(
+    {
+      key: priv,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
     Buffer.from(body.encrypted_aes_key, "base64"),
   );
 
-  const iv      = Buffer.from(body.initial_vector,   "base64");
+  const iv = Buffer.from(body.initial_vector, "base64");
   const payload = Buffer.from(body.encrypted_flow_data, "base64");
-  const data    = payload.subarray(0, -TAG);
-  const tag     = payload.subarray(-TAG);
+  const data = payload.subarray(0, -TAG);
+  const tag = payload.subarray(-TAG);
 
   const dec = crypto.createDecipheriv("aes-128-gcm", aes, iv);
   dec.setAuthTag(tag);
@@ -36,30 +40,40 @@ function decrypt(body) {
 
 function encrypt(obj, aes, iv) {
   const enc = crypto.createCipheriv("aes-128-gcm", aes, flipIV(iv));
-  const ct  = Buffer.concat([enc.update(JSON.stringify(obj), "utf8"), enc.final(), enc.getAuthTag()]);
+  const ct = Buffer.concat([
+    enc.update(JSON.stringify(obj), "utf8"),
+    enc.final(),
+    enc.getAuthTag(),
+  ]);
   return ct.toString("base64");
 }
 // -----------------------------------------------
 
 app.post("/", (req, res) => {
   try {
+    /* 🔵  Health-check sin cifrar ---------------------------------------- */
+    if (req.body?.action === "ping") {
+      const b64 = Buffer.from(
+        JSON.stringify({ data: { status: "active" } }),
+      ).toString("base64");
+      return res.type("text/plain").send(b64);
+    }
+    /* ------------------------------------------------------------------- */
+
     const { aes, iv, body } = decrypt(req.body);
 
     switch (body.action) {
-      case "ping": // health-check
-        return res.type("text/plain").send(
-          encrypt({ data: { status: "active" } }, aes, iv)
-        );
-
       case "INIT": // al abrir el flow
-        return res.type("text/plain").send(
-          encrypt({ screen: "INASISTENCIA", data: {} }, aes, iv)
-        );
+        return res
+          .type("text/plain")
+          .send(encrypt({ screen: "INASISTENCIA", data: {} }, aes, iv));
 
       case "data_exchange": // después de la 1ª screen
-        return res.type("text/plain").send(
-          encrypt({ screen: "CONFIRMACION", data: body.data ?? {} }, aes, iv)
-        );
+        return res
+          .type("text/plain")
+          .send(
+            encrypt({ screen: "CONFIRMACION", data: body.data ?? {} }, aes, iv),
+          );
 
       default:
         console.error("acción no soportada →", body);
