@@ -17,7 +17,7 @@ const flipIV = (iv) => {
 };
 
 function decrypt(body) {
-  const priv = crypto.createPrivateKey({ key: PRIVATE_KEY });
+  const priv = crypto.createPrivateKey({ key: PRIVATE_KEY, format: "pem", type: "pkcs1" });
   const aes = crypto.privateDecrypt(
     {
       key: priv,
